@@ -24,13 +24,13 @@ export class BitcoinRpcService implements OnModuleInit {
     }
 
     async onModuleInit() {
-        const url = this.configService.get('BITCOIN_RPC_URL');
-        let user = this.configService.get('BITCOIN_RPC_USER');
-        let pass = this.configService.get('BITCOIN_RPC_PASSWORD');
-        const port = parseInt(this.configService.get('BITCOIN_RPC_PORT'));
-        const timeout = parseInt(this.configService.get('BITCOIN_RPC_TIMEOUT'));
+        const url = `http://${this.configService.get('RPC_HOST')}`;
+        let user = this.configService.get('RPC_USER');
+        let pass = this.configService.get('RPC_PASSWORD');
+        const port = parseInt(this.configService.get('RPC_PORT'));
+        const timeout = parseInt(this.configService.get('RPC_TIMEOUT'));
 
-        const cookiefile = this.configService.get('BITCOIN_RPC_COOKIEFILE')
+        const cookiefile = this.configService.get('RPC_COOKIEFILE')
 
         if (cookiefile != undefined && cookiefile != '') {
             const cookie = fs.readFileSync(cookiefile).toString().split(':')

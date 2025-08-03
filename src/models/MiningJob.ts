@@ -1,10 +1,11 @@
-import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
+//import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import * as bitcoinjs from 'bitcoinjs-lib';
 
 import { IJobTemplate } from '../services/stratum-v1-jobs.service';
 import { eResponseMethod } from './enums/eResponseMethod';
 import { IMiningNotify } from './stratum-messages/IMiningNotify';
 import { ConfigService } from '@nestjs/config';
+import { peercoinMainnet } from '../networks/peercoin';
 
 const MAX_BLOCK_WEIGHT = 4000000;
 const MAX_SCRIPT_SIZE = 100; //   https://github.com/bitcoin/bitcoin/blob/ffdc3d6060f6e65e69cf115a13b83e6eb4a0a0a8/src/consensus/tx_check.cpp#L49
@@ -12,6 +13,15 @@ interface AddressObject {
     address: string;
     percent: number;
 }
+
+function getPeercoinAddressType(address: string): 'p2pkh' | 'p2sh' | 'p2wpkh' {
+    if (/^P[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2pkh';
+    if (/^M[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2sh';
+    if (/^pcrt1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$/.test(address)) return 'p2wpkh';
+    throw new Error(`Invalid Peercoin address format: ${address}`);
+}
+
+
 export class MiningJob {
 
     private coinbaseTransaction: bitcoinjs.Transaction;
@@ -166,27 +176,19 @@ export class MiningJob {
         return coinbaseTransaction;
     }
 
-    private getPaymentScript(address: string): Buffer {
-        const addressInfo = getAddressInfo(address);
-        switch (addressInfo.type) {
-            case AddressType.p2wpkh: {
-                return bitcoinjs.payments.p2wpkh({ address, network: this.network }).output;
-            }
-            case AddressType.p2pkh: {
-                return bitcoinjs.payments.p2pkh({ address, network: this.network }).output;
-            }
-            case AddressType.p2sh: {
-                return bitcoinjs.payments.p2sh({ address, network: this.network }).output;
-            }
-            case AddressType.p2tr: {
-                return bitcoinjs.payments.p2tr({ address, network: this.network }).output;
-            }
-            case AddressType.p2wsh: {
-                return bitcoinjs.payments.p2wsh({ address, network: this.network }).output;
-            }
-            default: {
-                return Buffer.alloc(0);
-            }
+    getPaymentScript(address: string): Buffer {
+        const type = getPeercoinAddressType(address);
+        const network = peercoinMainnet;
+
+        switch (type) {
+            case 'p2pkh':
+                return bitcoinjs.payments.p2pkh({ address, network }).output!;
+            case 'p2sh':
+                return bitcoinjs.payments.p2sh({ address, network }).output!;
+            case 'p2wpkh':
+                return bitcoinjs.payments.p2wpkh({ address, network }).output!;
+            default:
+                throw new Error(`Unsupported Peercoin address type: ${type}`);
         }
     }
 

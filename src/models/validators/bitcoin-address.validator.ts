@@ -13,6 +13,12 @@ export class BitcoinAddressValidator implements ValidatorConstraintInterface {
     ) { }
 
     validate(value: string): boolean {
+        const coin = this.configService.get('COIN_SYMBOL')
+        if (coin === 'PPC') {
+            const ppcRegex = /^[PM][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+            return ppcRegex.test(value);
+        }
+        // Fallback to Bitcoin-style validation for BTC or others
         return validate(value, this.configService.get('NETWORK'));
     }
 
