@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -9,8 +12,6 @@ import * as ecc from 'tiny-secp256k1';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-
-  console.log("ENV CHECK: COIN_SYMBOL =", process.env.COIN_SYMBOL);
 
   if (process.env.API_PORT == null) {
     console.error('It appears your environment is not configured, create and populate an .env file.');
