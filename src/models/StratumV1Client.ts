@@ -413,7 +413,7 @@ export class StratumV1Client {
         const networkConfig = this.configService.get('NETWORK');
         let network;
 
-        if (networkConfig === 'mainnet') {
+        if (networkConfig === 'mainnet' || networkConfig === 'PPC' || !networkConfig) {
             network = bitcoinjs.networks.bitcoin;
         } else if (networkConfig === 'testnet') {
             network = bitcoinjs.networks.testnet;

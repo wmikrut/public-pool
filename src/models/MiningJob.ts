@@ -167,28 +167,35 @@ export class MiningJob {
     }
 
     private getPaymentScript(address: string): Buffer {
-        const addressInfo = getAddressInfo(address);
-        switch (addressInfo.type) {
-            case AddressType.p2wpkh: {
-                return bitcoinjs.payments.p2wpkh({ address, network: this.network }).output;
-            }
-            case AddressType.p2pkh: {
-                return bitcoinjs.payments.p2pkh({ address, network: this.network }).output;
-            }
-            case AddressType.p2sh: {
-                return bitcoinjs.payments.p2sh({ address, network: this.network }).output;
-            }
-            case AddressType.p2tr: {
-                return bitcoinjs.payments.p2tr({ address, network: this.network }).output;
-            }
-            case AddressType.p2wsh: {
-                return bitcoinjs.payments.p2wsh({ address, network: this.network }).output;
-            }
-            default: {
-                return Buffer.alloc(0);
-            }
+    const networkType = process.env.NETWORK?.toLowerCase();
+
+    if (networkType === 'PPC' || networkType === 'PEERCOIN') {
+        if (/^P[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) {
+            return bitcoinjs.payments.p2pkh({ address, network: this.network }).output!;
+        } else if (/^M[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) {
+            return bitcoinjs.payments.p2sh({ address, network: this.network }).output!;
+        } else {
+            throw new Error(`Unsupported Peercoin address format: ${address}`);
         }
     }
+
+    const addressInfo = getAddressInfo(address);
+    switch (addressInfo.type) {
+        case AddressType.p2wpkh:
+            return bitcoinjs.payments.p2wpkh({ address, network: this.network }).output!;
+        case AddressType.p2pkh:
+            return bitcoinjs.payments.p2pkh({ address, network: this.network }).output!;
+        case AddressType.p2sh:
+            return bitcoinjs.payments.p2sh({ address, network: this.network }).output!;
+        case AddressType.p2tr:
+            return bitcoinjs.payments.p2tr({ address, network: this.network }).output!;
+        case AddressType.p2wsh:
+            return bitcoinjs.payments.p2wsh({ address, network: this.network }).output!;
+        default:
+            throw new Error(`Unknown address type for: ${address}`);
+    }
+}
+
 
     public response(jobTemplate: IJobTemplate): string {
 

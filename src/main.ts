@@ -10,6 +10,8 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
 
+  console.log("ENV CHECK: COIN_SYMBOL =", process.env.COIN_SYMBOL);
+
   if (process.env.API_PORT == null) {
     console.error('It appears your environment is not configured, create and populate an .env file.');
     return;

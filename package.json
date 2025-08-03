@@ -50,7 +50,7 @@
     "zeromq": "6.0.0-beta.19"
   },
   "devDependencies": {
-    "@nestjs/cli": "^9.0.0",
+    "@nestjs/cli": "^9.5.0",
     "@nestjs/schematics": "^9.0.0",
     "@nestjs/testing": "^9.0.0",
     "@types/big.js": "^6.1.6",
