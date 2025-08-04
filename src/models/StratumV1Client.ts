@@ -413,7 +413,7 @@ export class StratumV1Client {
         const networkConfig = this.configService.get('NETWORK');
         let network;
 
-        if (networkConfig === 'mainnet' || networkConfig === 'PPC' || !networkConfig) {
+        if (networkConfig === 'mainnet' || !networkConfig) {
             network = bitcoinjs.networks.bitcoin;
         } else if (networkConfig === 'testnet') {
             network = bitcoinjs.networks.testnet;
@@ -521,7 +521,9 @@ export class StratumV1Client {
 
             if (submissionDifficulty >= jobTemplate.blockData.networkDifficulty) {
                 console.log('!!! BLOCK FOUND !!!');
+                console.log(updatedJobBlock.transactions.map(tx => tx.toHex()));
                 const blockHex = updatedJobBlock.toHex(false);
+                console.log("Serialized block hex:", blockHex);
                 const result = await this.bitcoinRpcService.SUBMIT_BLOCK(blockHex);
                 await this.blocksService.save({
                     height: jobTemplate.blockData.height,

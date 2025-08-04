@@ -5,7 +5,8 @@ import { IJobTemplate } from '../services/stratum-v1-jobs.service';
 import { eResponseMethod } from './enums/eResponseMethod';
 import { IMiningNotify } from './stratum-messages/IMiningNotify';
 import { ConfigService } from '@nestjs/config';
-import { peercoinMainnet } from '../networks/peercoin';
+import { Network } from 'bitcoinjs-lib';
+import { peercoinMainnet, peercoinTestnet } from '../networks/peercoin';
 
 const MAX_BLOCK_WEIGHT = 4000000;
 const MAX_SCRIPT_SIZE = 100; //   https://github.com/bitcoin/bitcoin/blob/ffdc3d6060f6e65e69cf115a13b83e6eb4a0a0a8/src/consensus/tx_check.cpp#L49
@@ -14,12 +15,24 @@ interface AddressObject {
     percent: number;
 }
 
+export const networks: Record<string, Network> = {
+  ppc: peercoinMainnet,
+  ppctest: peercoinTestnet,
+};
+
 function getPeercoinAddressType(address: string): 'p2pkh' | 'p2sh' | 'p2wpkh' {
-    if (/^P[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2pkh';
-    if (/^M[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2sh';
+    // Mainnet P2PKH or testnet m/n addresses
+    if (/^[Pm][1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2pkh';
+
+    // Mainnet P2SH or testnet 2-addresses (if supported)
+    if (/^[M2][1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2sh';
+
+    // Bech32 (SegWit, optional for PPC)
     if (/^pcrt1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$/.test(address)) return 'p2wpkh';
+
     throw new Error(`Invalid Peercoin address format: ${address}`);
 }
+
 
 
 export class MiningJob {
@@ -31,6 +44,7 @@ export class MiningJob {
     public jobTemplateId: string;
     public networkDifficulty: number;
     public creation: number;
+    public coinSymbol: string;
 
     constructor(
         configService: ConfigService,
@@ -39,9 +53,9 @@ export class MiningJob {
         payoutInformation: AddressObject[],
         jobTemplate: IJobTemplate
     ) {
-
         this.creation = new Date().getTime();
         this.jobTemplateId = jobTemplate.blockData.id;
+        this.coinSymbol = configService.get('COIN_SYMBOL')?.toLowerCase();
 
         this.coinbaseTransaction = this.createCoinbaseTransaction(payoutInformation, jobTemplate.blockData.coinbasevalue);
 
@@ -178,7 +192,11 @@ export class MiningJob {
 
     getPaymentScript(address: string): Buffer {
         const type = getPeercoinAddressType(address);
-        const network = peercoinMainnet;
+        
+        const network =
+            this.coinSymbol === 'ppctest' ? peercoinTestnet :
+            this.coinSymbol === 'ppc'     ? peercoinMainnet :
+            (() => { throw new Error(`Unsupported coin: ${this.coinSymbol}`) })();
 
         switch (type) {
             case 'p2pkh':

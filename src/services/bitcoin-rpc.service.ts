@@ -47,7 +47,7 @@ export class BitcoinRpcService implements OnModuleInit {
             console.error('Could not reach RPC host');
         });
 
-        if (this.configService.get('BITCOIN_ZMQ_HOST')) {
+        if (this.configService.get('ZMQ_HOST')) {
             console.log('Using ZMQ');
             const sock = new zmq.Subscriber;
 
@@ -60,7 +60,7 @@ export class BitcoinRpcService implements OnModuleInit {
                 console.log('ZMQ Unable to connect, Retrying');
             });
 
-            sock.connect(this.configService.get('BITCOIN_ZMQ_HOST'));
+            sock.connect(this.configService.get('ZMQ_HOST'));
             sock.subscribe('rawblock');
             // Don't await this, otherwise it will block the rest of the program
             this.listenForNewBlocks(sock);
@@ -73,7 +73,9 @@ export class BitcoinRpcService implements OnModuleInit {
 
     private async listenForNewBlocks(sock: zmq.Subscriber) {
         for await (const [topic, msg] of sock) {
-            console.log("New Block");
+            console.log(`[ZMQ] New message on topic: ${topic.toString()}`);
+            const blockHex = msg.toString('hex');
+            console.log(`[ZMQ] Raw block hex (first 32 bytes): ${blockHex.slice(0, 64)}`);
             await this.pollMiningInfo();
         }
     }
@@ -166,21 +168,28 @@ export class BitcoinRpcService implements OnModuleInit {
     public async SUBMIT_BLOCK(hexdata: string): Promise<string> {
         let response: string = 'unknown';
         try {
-            response = await this.client.submitblock({
-                hexdata
-            });
+            response = await this.client.submitblock({ hexdata });
+
             if (response == null) {
                 response = 'SUCCESS!';
             }
-            console.log(`BLOCK SUBMISSION RESPONSE: ${response}`);
-            console.log(hexdata);
-            console.log(JSON.stringify(response));
-        } catch (e) {
-            response = e;
-            console.log(`BLOCK SUBMISSION RESPONSE ERROR: ${e}`);
-        }
-        return response;
 
+            console.log(`BLOCK SUBMISSION RESPONSE: ${response}`);
+            console.log('Submitted block hex:', hexdata);
+
+        } catch (e) {
+            // Improve error readability
+            const errorMessage =
+                typeof e === 'object'
+                    ? JSON.stringify(e, Object.getOwnPropertyNames(e), 2)
+                    : String(e);
+
+            console.error('BLOCK SUBMISSION RESPONSE ERROR:', errorMessage);
+            response = errorMessage;
+        }
+
+        return response;
     }
+
 }
 
