@@ -28,7 +28,7 @@ import { SuggestDifficulty } from './stratum-messages/SuggestDifficultyMessage';
 import { StratumV1ClientStatistics } from './StratumV1ClientStatistics';
 import { ExternalSharesService } from '../services/external-shares.service';
 import { DifficultyUtils } from '../utils/difficulty.utils';
-
+import { logShare } from '../utils/shareLogger';
 
 export class StratumV1Client {
 
@@ -55,6 +55,7 @@ export class StratumV1Client {
     private buffer: string = '';
 
     private miningSubmissionHashes = new Set<string>()
+    public coinSymbol: string;
 
     constructor(
         public readonly socket: Socket,
@@ -68,6 +69,7 @@ export class StratumV1Client {
         private readonly addressSettingsService: AddressSettingsService,
         private readonly externalSharesService: ExternalSharesService
     ) {
+        this.coinSymbol = configService.get('COIN_SYMBOL')?.toLowerCase();
 
         this.socket.on('data', (data: Buffer) => {
             this.buffer += data.toString();
@@ -481,6 +483,20 @@ export class StratumV1Client {
             if (!success) {
                 return false;
             }
+            logShare({
+                    coin_symbol: this.coinSymbol,
+                    worker: `${this.clientAuthorization.address}.${this.clientAuthorization.worker}`,
+                    job_id: submission.jobId,
+                    difficulty: this.sessionDifficulty,
+                    extra_nonce1: this.extraNonceAndSessionId,
+                    extra_nonce2: submission.extraNonce2,
+                    ntime: submission.ntime,
+                    nonce: submission.nonce,
+                    version: submission.versionMask,
+                    accepted: false,
+                    description: 'Duplicate share', 
+                    timestamp: new Date()
+                });
             return false;
         }else{
             this.miningSubmissionHashes.add(submissionHash);
@@ -499,6 +515,20 @@ export class StratumV1Client {
             if (!success) {
                 return false;
             }
+            logShare({
+                    coin_symbol: this.coinSymbol,
+                    worker: `${this.clientAuthorization.address}.${this.clientAuthorization.worker}`,
+                    job_id: submission.jobId,
+                    difficulty: this.sessionDifficulty,
+                    extra_nonce1: this.extraNonceAndSessionId,
+                    extra_nonce2: submission.extraNonce2,
+                    ntime: submission.ntime,
+                    nonce: submission.nonce,
+                    version: submission.versionMask,
+                    accepted: false,
+                    description: 'Job not found',
+                    timestamp: new Date()
+                });
             return false;
         }
         const jobTemplate = this.stratumV1JobsService.getJobTemplateById(job.jobTemplateId);
@@ -584,13 +614,39 @@ export class StratumV1Client {
             if (!success) {
                 return false;
             }
-
+            logShare({
+                    coin_symbol: this.coinSymbol,
+                    worker: `${this.clientAuthorization.address}.${this.clientAuthorization.worker}`,
+                    job_id: submission.jobId,
+                    difficulty: this.sessionDifficulty,
+                    extra_nonce1: this.extraNonceAndSessionId,
+                    extra_nonce2: submission.extraNonce2,
+                    ntime: submission.ntime,
+                    nonce: submission.nonce,
+                    version: submission.versionMask,
+                    accepted: false,
+                    description: 'Difficulty too low',
+                    timestamp: new Date()
+                });
             return false;
         }
 
         //await this.checkDifficulty();
-        return true;
 
+        logShare({
+            coin_symbol: this.coinSymbol,
+            worker: `${this.clientAuthorization.address}.${this.clientAuthorization.worker}`,
+            job_id: submission.jobId,
+            difficulty: this.sessionDifficulty,
+            extra_nonce1: this.extraNonceAndSessionId,
+            extra_nonce2: submission.extraNonce2,
+            ntime: submission.ntime,
+            nonce: submission.nonce,
+            version: submission.versionMask,
+            accepted: true,
+            timestamp: new Date()
+        });
+        return true;
     }
 
     private async checkDifficulty() {

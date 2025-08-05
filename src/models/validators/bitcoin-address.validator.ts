@@ -22,6 +22,18 @@ export class BitcoinAddressValidator implements ValidatorConstraintInterface {
             const ppcTestnetRegex = /^[mn][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
             return ppcTestnetRegex.test(value);
         }
+        //DigiByte Mainnet (starts with D or S)
+        if (coin === 'DGB') {
+            const dgbRegex = /^[DS][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+            return dgbRegex.test(value);
+        }
+
+        // DigiByte Testnet (starts with t or 2)
+        if (coin === 'DGBTEST') {
+            const dgbTestnetRegex = /^[t2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+            return dgbTestnetRegex.test(value);
+        }
+
         // Fallback to Bitcoin-style validation for BTC or others
         return validate(value, this.configService.get('NETWORK'));
     }

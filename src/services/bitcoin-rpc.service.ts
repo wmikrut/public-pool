@@ -27,6 +27,7 @@ export class BitcoinRpcService implements OnModuleInit {
         const url = `http://${this.configService.get('RPC_HOST')}`;
         let user = this.configService.get('RPC_USER');
         let pass = this.configService.get('RPC_PASSWORD');
+        let coinSymbol = this.configService.get('COIN_SYMBOL');
         const port = parseInt(this.configService.get('RPC_PORT'));
         const timeout = parseInt(this.configService.get('RPC_TIMEOUT'));
 
@@ -41,8 +42,8 @@ export class BitcoinRpcService implements OnModuleInit {
 
         this.client = new RPCClient({ url, port, timeout, user, pass });
 
-        this.client.getrpcinfo().then((res) => {
-            console.log('Bitcoin RPC connected');
+        this.client.getrpcinfo().then((res) => {            
+            console.log(`${coinSymbol} RPC connected`);
         }, () => {
             console.error('Could not reach RPC host');
         });

@@ -7,6 +7,7 @@ import { IMiningNotify } from './stratum-messages/IMiningNotify';
 import { ConfigService } from '@nestjs/config';
 import { Network } from 'bitcoinjs-lib';
 import { peercoinMainnet, peercoinTestnet } from '../networks/peercoin';
+import { digibyteMainnet, digibyteTestnet } from '../networks/digibyte';
 
 const MAX_BLOCK_WEIGHT = 4000000;
 const MAX_SCRIPT_SIZE = 100; //   https://github.com/bitcoin/bitcoin/blob/ffdc3d6060f6e65e69cf115a13b83e6eb4a0a0a8/src/consensus/tx_check.cpp#L49
@@ -18,6 +19,8 @@ interface AddressObject {
 export const networks: Record<string, Network> = {
   ppc: peercoinMainnet,
   ppctest: peercoinTestnet,
+  dgb: digibyteMainnet,
+  dbgtest: digibyteTestnet,
 };
 
 function getPeercoinAddressType(address: string): 'p2pkh' | 'p2sh' | 'p2wpkh' {
@@ -31,6 +34,24 @@ function getPeercoinAddressType(address: string): 'p2pkh' | 'p2sh' | 'p2wpkh' {
     if (/^pcrt1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$/.test(address)) return 'p2wpkh';
 
     throw new Error(`Invalid Peercoin address format: ${address}`);
+}
+
+export function getDigiByteAddressType(address: string): 'p2pkh' | 'p2sh' | 'p2wpkh' {
+    // DigiByte P2PKH starts with 'D'
+    if (/^D[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2pkh';
+
+    // DigiByte P2SH starts with 'S'
+    if (/^S[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2sh';
+
+    // DigiByte Bech32 SegWit starts with 'dgb1'
+    if (/^dgb1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$/.test(address)) return 'p2wpkh';
+
+    // DigiByte testnet (m/n = p2pkh, 2 = p2sh, tb1 = bech32)
+    if (/^[mn][1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2pkh';
+    if (/^2[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(address)) return 'p2sh';
+    if (/^tb1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$/.test(address)) return 'p2wpkh';
+
+    throw new Error(`Invalid DigiByte address format: ${address}`);
 }
 
 
@@ -191,12 +212,29 @@ export class MiningJob {
     }
 
     getPaymentScript(address: string): Buffer {
-        const type = getPeercoinAddressType(address);
-        
-        const network =
-            this.coinSymbol === 'ppctest' ? peercoinTestnet :
-            this.coinSymbol === 'ppc'     ? peercoinMainnet :
-            (() => { throw new Error(`Unsupported coin: ${this.coinSymbol}`) })();
+        let network;
+        let type;
+
+        switch (this.coinSymbol.toLowerCase()) {
+            case 'ppc':
+                network = peercoinMainnet;
+                type = getPeercoinAddressType(address);
+                break;
+            case 'ppctest':
+                network = peercoinTestnet;
+                type = getPeercoinAddressType(address);
+                break;
+            case 'dgb':
+                network = digibyteMainnet;
+                type = getDigiByteAddressType(address);
+                break;
+            case 'dgbtest':
+                network = digibyteTestnet;
+                type = getDigiByteAddressType(address);
+                break;
+            default:
+                throw new Error(`Unsupported coin: ${this.coinSymbol}`);
+        }
 
         switch (type) {
             case 'p2pkh':
@@ -206,9 +244,10 @@ export class MiningJob {
             case 'p2wpkh':
                 return bitcoinjs.payments.p2wpkh({ address, network }).output!;
             default:
-                throw new Error(`Unsupported Peercoin address type: ${type}`);
+                throw new Error(`Unsupported address type for ${this.coinSymbol}: ${type}`);
         }
     }
+
 
     public response(jobTemplate: IJobTemplate): string {
 
