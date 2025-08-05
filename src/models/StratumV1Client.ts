@@ -29,6 +29,8 @@ import { StratumV1ClientStatistics } from './StratumV1ClientStatistics';
 import { ExternalSharesService } from '../services/external-shares.service';
 import { DifficultyUtils } from '../utils/difficulty.utils';
 import { logShare } from '../utils/shareLogger';
+import { logBlock } from '../utils/blockLogger';
+
 
 export class StratumV1Client {
 
@@ -554,6 +556,18 @@ export class StratumV1Client {
                 console.log(updatedJobBlock.transactions.map(tx => tx.toHex()));
                 const blockHex = updatedJobBlock.toHex(false);
                 console.log("Serialized block hex:", blockHex);
+                
+                await logBlock({
+                    height: jobTemplate.blockData.height,
+                    hash: blockHex,
+                    difficulty: jobTemplate.blockData.networkDifficulty,
+                    coin_symbol: this.coinSymbol,
+                    worker: `${this.clientAuthorization.address}.${this.clientAuthorization.worker}`,
+                    reward: 0,
+                    timestamp: new Date()
+                });
+
+                
                 const result = await this.bitcoinRpcService.SUBMIT_BLOCK(blockHex);
                 await this.blocksService.save({
                     height: jobTemplate.blockData.height,
